@@ -16,19 +16,20 @@ class Summarizer:
         temperature=0
     )
 
-    map_template = """You are an summarization assistant. Your job is
+    template = """You are an summarization assistant. Your job is
         to summarize two pieces of text into a single piece of text.
         Pay attention to people names in the original pieces of text,
-        when summarizing them. There is the first piece of text {first_text}
-        and the second piece of text {second_text}. Summarize them in 
-        such way that the final summary has no more than four paragraphs 
-        and that each paragraph is not greater than 392 characters. 
-        Separate each paragraph with `\n\n`.
+        when summarizing them. Here is the first piece of text 
+        {first_text} and here is the second piece of text {second_text}.
+        Make your summary as a text is complete on its own. Final 
+        summary cannot have more than four paragraphs. Each paragraph 
+        cannot be longer than 448 characters including white spaces. 
+        Terminate each paragraph with `\n\n`.
     """
 
-    map_prompt = PromptTemplate.from_template(map_template)
+    prompt = PromptTemplate.from_template(template)
     
-    map_chain = LLMChain(llm=llm, prompt=map_prompt)
+    map_chain = LLMChain(llm=llm, prompt=prompt)
 
     def __init__(self, chuncked_piece_of_text) -> None:
         self.chucked_piece_of_text = chuncked_piece_of_text
@@ -37,52 +38,64 @@ class Summarizer:
 
     @staticmethod
     def _create_summarization_pairs(pairs):
-        pairs_count = len(pairs)
-
-        first_list = list(range(0, pairs_count)) 
+        first_list = list(range(0, len(pairs))) 
         second_list = []
-        for i in range(0,len(first_list)-1,2):
-            if first_list[i]+1==first_list[i+1]:
-                second_list.append([first_list[i],first_list[i+1]])
+        for i in range(0, len(first_list)-1, 2):
+            if first_list[i]+1 == first_list[i+1]:
+                second_list.append([first_list[i], first_list[i+1]])
 
         return second_list
+    
+    @staticmethod
+    def _log_message(cycle, index):
+        if index%16 == 0:
+            print(f'Summary cycle: {cycle}, pair: {index}')
+    
+    def _get_pieces_of_text(self, pair):
 
-    def _summaize_single_pair(self):
-        pass
+        return self._summarized_text[pair[0]], self._summarized_text[pair[1]]
 
-    def _summarize_all_remaining_pairs(self):
-        i = 1
+
+    def _summarize_single_pair(self, pair: list = []) -> Document:
+        first_piece_of_text, second_piece_of_text = \
+            self._get_pieces_of_text(pair)        
+        result = self.map_chain.invoke({
+            'first_text': first_piece_of_text,
+            'second_text': second_piece_of_text
+        })
+        document = Document(page_content=result['text'])
+
+        return document
+
+    def _summarize_pairs_within_cycle(self, cycle_index) -> list[str]:
+        new_texts = []
+        for pair_index, pair in enumerate(self._summarization_pairs):
+            self._log_message(cycle=cycle_index, index=pair_index)
+            document = self._summarize_single_pair(pair=pair)
+            new_texts.extend([document])
+
+        return new_texts
+
+    def _summarize(self):
+        cycle = 1
         while len(self._summarized_text) > 1:
-            new_texts = []
-            self._summarization_pairs = self._create_summarization_pairs(
-                pairs=self._summarized_text
-            )
-            for index, pair in enumerate(self._summarization_pairs):
-                if index%10 == 0:
-                    print(f'Summary cycle: {i}; pair{index}')
-                first_piece_of_text = self._summarized_text[pair[0]]
-                second_piece_of_text = self._summarized_text[pair[1]]
-                result = self.map_chain.invoke(
-                    {
-                        'first_text': first_piece_of_text,
-                        'second_text': second_piece_of_text
-                    }
-                )
-                document = Document(page_content=result['text'])
-                new_texts.extend([document])
-            i = i + 1
-            self._summarized_text = new_texts
+            self._summarization_pairs = \
+                self._create_summarization_pairs(pairs=self._summarized_text)
+            summary_cycle = \
+                self._summarize_pairs_within_cycle(cycle_index=cycle)
+            cycle = cycle + 1
+            self._summarized_text = summary_cycle
         
         print('summarization complete')       
 
     def summarize(self):
-        self._summarize_all_remaining_pairs()
+        self._summarize()
 
     def get_summarized_text(self):
 
         return self._summarized_text
 
-class SummarizerManager:
+class SummarizationManager:
 
     def __init__(self, chuncked_pieces_of_text: list = None) -> None:
         self.chuncked_pieces_of_text = chuncked_pieces_of_text
@@ -104,7 +117,7 @@ class SummarizerManager:
 class TextSplitter:
 
     def __init__(self, 
-                 chunk_size: int = 384, 
+                 chunk_size: int = 448, 
                  document: str = None) -> None:
         self.chunk_size = chunk_size
         self.document = document
@@ -117,6 +130,7 @@ class TextSplitter:
             chunk_size=self.chunk_size, 
             chunk_overlap=0
         )
+
     def _split_document(self):
         self._converted_document = self._splitter.create_documents(
             [self.document]
