@@ -26,7 +26,7 @@ class TextLoaderManager:
     @staticmethod
     def _read_file(complete_file_name: Path = None):
         with open(complete_file_name, 'r', encoding='utf8') as text_file:
-            content = text_file.readlines()
+            content = text_file.read()
 
         return content
 

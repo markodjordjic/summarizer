@@ -1,4 +1,5 @@
 from utilities.text import TextLoaderManager
+from summarizer.summarizer import TextSplitterManager
 
 if __name__ == '__main__':
 
@@ -7,3 +8,7 @@ if __name__ == '__main__':
     text_loader = TextLoaderManager(folder=TEXT_FOLDER)
     text_loader.read_files()
     texts = text_loader.get_pieces_of_text()
+
+    text_splitter = TextSplitterManager(pieces_of_text=texts)
+    text_splitter.split_documents()
+    text_splitter.get_split_documents()
