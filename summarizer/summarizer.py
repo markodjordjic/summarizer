@@ -2,7 +2,6 @@ from copy import deepcopy
 from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
 from langchain_openai.chat_models import ChatOpenAI
-from langchain.chains.llm import LLMChain
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from utilities.general import environment_reader
 
@@ -21,15 +20,16 @@ class Summarizer:
         Pay attention to people names in the original pieces of text,
         when summarizing them. Here is the first piece of text 
         {first_text} and here is the second piece of text {second_text}.
-        Make your summary as a text is complete on its own. Final 
-        summary cannot have more than four paragraphs. Each paragraph 
-        cannot be longer than 448 characters including white spaces. 
-        Terminate each paragraph with `\n\n`.
+        The summary you make must be a complete text on its own. It 
+        cannot consist of statements "The first piece of text", 
+        "The second piece of text". Final summary cannot have more than 
+        four paragraphs. Each paragraph cannot be longer than 448 
+        characters including white spaces. Terminate each paragraph with `\n\n`.
     """
 
     prompt = PromptTemplate.from_template(template)
     
-    map_chain = LLMChain(llm=llm, prompt=prompt)
+    chain = prompt | llm
 
     def __init__(self, chuncked_piece_of_text) -> None:
         self.chucked_piece_of_text = chuncked_piece_of_text
@@ -59,11 +59,11 @@ class Summarizer:
     def _summarize_single_pair(self, pair: list = []) -> Document:
         first_piece_of_text, second_piece_of_text = \
             self._get_pieces_of_text(pair)        
-        result = self.map_chain.invoke({
+        result = self.chain.invoke({
             'first_text': first_piece_of_text,
             'second_text': second_piece_of_text
         })
-        document = Document(page_content=result['text'])
+        document = Document(page_content=result.content)
 
         return document
 
@@ -86,7 +86,7 @@ class Summarizer:
             cycle = cycle + 1
             self._summarized_text = summary_cycle
         
-        print('summarization complete')       
+        print('Summarization complete.')       
 
     def summarize(self):
         self._summarize()
@@ -104,14 +104,14 @@ class SummarizationManager:
     def summarize_text(self):
         for chuncked_text in self.chuncked_pieces_of_text:
             summarizer = Summarizer(chuncked_piece_of_text=chuncked_text)
-            summarizer.summarize()            
+            summarizer.summarize()
+            self._summarized_text.extend([summarizer.get_summarized_text()])           
 
-    def get_summarized_text(self):
+    def get_summarized_texts(self):
         
         assert self._summarized_text is not None, 'No summarized text.'
 
         return self._summarized_text
-    
 
 
 class TextSplitter:
@@ -132,9 +132,15 @@ class TextSplitter:
         )
 
     def _split_document(self):
-        self._converted_document = self._splitter.create_documents(
-            [self.document]
-        )
+        self._converted_document = \
+            self._splitter.create_documents([self.document])
+        chunks = len(self._converted_document)
+        while chunks > 128:
+            self.chunk_size += 32
+            self._instantiate_splitter()
+            self._converted_document = \
+                self._splitter.create_documents([self.document])
+            chunks = len(self._converted_document)
 
     def split_document(self):
         
@@ -161,7 +167,7 @@ class TextSplitterManager:
         text_splitter.split_document()
         converted_text = text_splitter.get_converted_document()
         print(
-            f'Text with: {len(text)} characters, split into {len(converted_text)} pieces.'
+            f'Text with: {len(text)} characters, split into {len(converted_text)} pieces with chunk size: {text_splitter.chunk_size}.'
         )
 
         return converted_text
