@@ -1,4 +1,7 @@
 from copy import deepcopy
+import textwrap
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as grid
 from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
 from langchain_openai.chat_models import ChatOpenAI
@@ -55,7 +58,6 @@ class Summarizer:
 
         return self._summarized_text[pair[0]], self._summarized_text[pair[1]]
 
-
     def _summarize_single_pair(self, pair: list = []) -> Document:
         first_piece_of_text, second_piece_of_text = \
             self._get_pieces_of_text(pair)        
@@ -102,7 +104,8 @@ class SummarizationManager:
         self._summarized_text = []
 
     def summarize_text(self):
-        for chuncked_text in self.chuncked_pieces_of_text:
+        for index, chuncked_text in enumerate(self.chuncked_pieces_of_text):
+            print(f'Summarizing {index+1} out of {len(self.chuncked_pieces_of_text)} documents.')
             summarizer = Summarizer(chuncked_piece_of_text=chuncked_text)
             summarizer.summarize()
             self._summarized_text.extend([summarizer.get_summarized_text()])           
@@ -185,3 +188,72 @@ class TextSplitterManager:
         assert len(self._split_documents) > 0, 'No split documents.'
 
         return self._split_documents
+
+
+class TextPlotter:
+
+    text_wrapper = textwrap.TextWrapper(width=70, fix_sentence_endings=True)
+
+    def __init__(self, paragraph: str = None) -> None:
+        self.paragraphs = paragraph
+        self._splited_paragraphs = None
+        self._wrapped_paragraphs = None
+        self._joined_paragraphs = None
+
+    def _split_paragraphs(self):
+        self._splited_paragraphs = \
+            self.paragraphs[0].page_content.split('\n\n')
+
+    def _wrap_paragraph_text(self, paragraph):
+        wrapped = self.text_wrapper.wrap(text=paragraph)
+        joined = '\n'.join(wrapped)
+
+        return joined
+
+    def _wrap_text(self):
+        wrapped_paragraphs = []
+        for paragraph in self._splited_paragraphs:
+            wrapped_paragraph = self._wrap_paragraph_text(paragraph=paragraph)
+            wrapped_paragraphs.extend([wrapped_paragraph])
+
+        self._wrapped_paragraphs = wrapped_paragraphs
+
+    def _join_paragraphs(self):
+        self._joined_paragraphs = '\n\n'.join(self._wrapped_paragraphs)
+
+    def _plot_text(self):
+        figure = plt.figure(figsize=[8.3, 11.7])
+        plotting_grid = grid.GridSpec(nrows=1, ncols=1)
+        axis_1 = figure.add_subplot(plotting_grid[0, 0])
+        text_kwargs = dict(ha='left', va='top', fontsize=10, family='monospace')
+        axis_1.text(x=.05, y=.95, s=self._joined_paragraphs, wrap=True, **text_kwargs)  
+        axis_1.set_xticklabels([])
+        axis_1.set_yticklabels([])
+        axis_1.tick_params(
+            axis='both', 
+            which='both', 
+            bottom=False, 
+            top=False, 
+            left=False
+        )
+        plt.show()
+    
+    def plot_text(self):
+        self._split_paragraphs()
+        self._wrap_text()
+        self._join_paragraphs()
+        self._plot_text()
+
+class TextPlotterManager:
+
+    def __init__(self, paragraphs: list[str]) -> None:
+        self.paragraphs = paragraphs
+
+    @staticmethod
+    def _plot_text(paragraph: str = None):
+        text_plotter = TextPlotter(paragraph=paragraph)
+        text_plotter.plot_text()
+
+    def plot_text(self):
+        for paragraph in self.paragraphs:
+            self._plot_text(paragraph=paragraph)
