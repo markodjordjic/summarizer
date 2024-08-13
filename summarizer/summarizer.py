@@ -197,8 +197,8 @@ class TextPlotter:
 
     text_wrapper = textwrap.TextWrapper(width=70, fix_sentence_endings=True)
 
-    def __init__(self, paragraph: str = None) -> None:
-        self.paragraphs = paragraph
+    def __init__(self, document: list[str] = None) -> None:
+        self.paragraphs = document
         self._splited_paragraphs = None
         self._wrapped_paragraphs = None
         self._joined_paragraphs = None
@@ -228,7 +228,8 @@ class TextPlotter:
         figure = plt.figure(figsize=[8.3, 11.7])
         plotting_grid = grid.GridSpec(nrows=1, ncols=1)
         axis_1 = figure.add_subplot(plotting_grid[0, 0])
-        text_kwargs = dict(ha='left', va='top', fontsize=10, family='Times New Roman')
+        text_kwargs = \
+            dict(ha='left', va='top', fontsize=10, family='Times New Roman')
         axis_1.text(x=.05, y=.95, s=self._joined_paragraphs, **text_kwargs)  
         axis_1.set_xticklabels([])
         axis_1.set_yticklabels([])
@@ -253,10 +254,10 @@ class TextPlotterManager:
         self.documents = documents
 
     @staticmethod
-    def _plot_text(paragraph: str = None):
-        text_plotter = TextPlotter(paragraph=paragraph)
+    def _plot_text(document: list[str] = None):
+        text_plotter = TextPlotter(document=document)
         text_plotter.plot_text()
 
     def plot_text(self):
         for document in self.documents:
-            self._plot_text(paragraph=document)
+            self._plot_text(document=document)

@@ -29,7 +29,8 @@
 # In order to achieve the objective a following methodology has been
 # selected:
 #   1. A selection of large pieces of text will be made on the basis of
-#   publicly available books in txt format from the https://www.gutenberg.org/.
+#   publicly available books in txt format from the
+#   https://www.gutenberg.org/.
 #   2. Data from these txt files will be loaded as is, and split into
 #   sections. The approach for splitting is that regardless of the
 #   initial text size, text will always be split to no more than 128
