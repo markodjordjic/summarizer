@@ -2,6 +2,8 @@ from copy import deepcopy
 import textwrap
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as grid
+import matplotlib
+matplotlib.use('TkAgg')
 from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
 from langchain_openai.chat_models import ChatOpenAI
@@ -51,7 +53,7 @@ class Summarizer:
     
     @staticmethod
     def _log_message(cycle, index):
-        if index%16 == 0:
+        if index%4 == 0:
             print(f'Summary cycle: {cycle}, pair: {index}')
     
     def _get_pieces_of_text(self, pair):
@@ -158,6 +160,7 @@ class TextSplitter:
     
         return self._converted_document
 
+
 class TextSplitterManager:
 
     def __init__(self, pieces_of_text: list[str] = None) -> None:
@@ -225,8 +228,8 @@ class TextPlotter:
         figure = plt.figure(figsize=[8.3, 11.7])
         plotting_grid = grid.GridSpec(nrows=1, ncols=1)
         axis_1 = figure.add_subplot(plotting_grid[0, 0])
-        text_kwargs = dict(ha='left', va='top', fontsize=10, family='monospace')
-        axis_1.text(x=.05, y=.95, s=self._joined_paragraphs, wrap=True, **text_kwargs)  
+        text_kwargs = dict(ha='left', va='top', fontsize=10, family='Times New Roman')
+        axis_1.text(x=.05, y=.95, s=self._joined_paragraphs, **text_kwargs)  
         axis_1.set_xticklabels([])
         axis_1.set_yticklabels([])
         axis_1.tick_params(
@@ -246,8 +249,8 @@ class TextPlotter:
 
 class TextPlotterManager:
 
-    def __init__(self, paragraphs: list[str]) -> None:
-        self.paragraphs = paragraphs
+    def __init__(self, documents: list[str]) -> None:
+        self.documents = documents
 
     @staticmethod
     def _plot_text(paragraph: str = None):
@@ -255,5 +258,5 @@ class TextPlotterManager:
         text_plotter.plot_text()
 
     def plot_text(self):
-        for paragraph in self.paragraphs:
-            self._plot_text(paragraph=paragraph)
+        for document in self.documents:
+            self._plot_text(paragraph=document)

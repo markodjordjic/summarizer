@@ -77,13 +77,10 @@ split_documents = text_splitter.get_split_documents()
 # Finally it is possible to start the `SummarizationManager` and to
 # create summaries of documents.
 # %%
-summarizer = SummarizationManager(
-    chuncked_pieces_of_text=[split_documents[6]]
-)
+summarizer = SummarizationManager(chuncked_pieces_of_text=[split_documents])
 summarizer.summarize_text()
 summarized_text = summarizer.get_summarized_texts()
 # %% [markdown]
 # %%
-text_plotter = TextPlotterManager(paragraphs=summarized_text)
+text_plotter = TextPlotterManager(documents=summarized_text)
 text_plotter.plot_text()
-
