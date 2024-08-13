@@ -82,6 +82,7 @@ summarizer = SummarizationManager(chuncked_pieces_of_text=[split_documents])
 summarizer.summarize_text()
 summarized_text = summarizer.get_summarized_texts()
 # %% [markdown]
+# Let us take a look at the text summaries.
 # %%
 text_plotter = TextPlotterManager(documents=summarized_text)
 text_plotter.plot_text()
