@@ -53,6 +53,7 @@
 # ## Implementation
 # Firstly, let us make the necessary imports.
 # %%
+from collections import OrderedDict
 from utilities.text import TextLoaderManager
 from summarizer.summarizer import TextSplitterManager, SummarizationManager, \
     TextPlotterManager
@@ -67,6 +68,21 @@ TEXT_FOLDER = r'C:\Users\marko\Desktop\data'
 text_loader = TextLoaderManager(folder=TEXT_FOLDER)
 text_loader.read_files()
 texts = text_loader.get_pieces_of_text()
+# %% [markdown] 
+# Here is a dictionary with the names of the books that and the files.
+# %%
+book_names = OrderedDict(
+    [
+        ('pg11.txt', "Alice's Adventures in Wonderland"),  
+        ('pg1513.txt',  'Romeo and Juliet'),
+        ('pg2554.txt', 'Crime and Punishment'), 
+        ('pg2680.txt', 'Meditations'),
+        ('pg345.txt', 'Dracula'),
+        ('pg66073.txt', 'Death in Venice'), 
+        ('pg69087.txt', 'The murder of Roger Ackroyd'),
+        ('pg76.txt', 'Adventures of Huckleberry Finn')
+    ]
+)
 # %% [markdown]
 # The next step is to split the documents, according to the 
 # methodological specification.
@@ -78,11 +94,13 @@ split_documents = text_splitter.get_split_documents()
 # Finally it is possible to start the `SummarizationManager` and to
 # create summaries of documents.
 # %%
-summarizer = SummarizationManager(chuncked_pieces_of_text=[split_documents])
+summarizer = SummarizationManager(chuncked_pieces_of_text=[split_documents[6]])
 summarizer.summarize_text()
 summarized_text = summarizer.get_summarized_texts()
 # %% [markdown]
 # Let us take a look at the text summaries.
 # %%
-text_plotter = TextPlotterManager(documents=summarized_text)
+text_plotter = TextPlotterManager(
+    documents=summarized_text, titles=list(book_names.values()[6])
+)
 text_plotter.plot_text()

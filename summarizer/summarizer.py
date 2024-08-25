@@ -8,14 +8,14 @@ from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
 from langchain_openai.chat_models import ChatOpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from utilities.general import environment_reader
+from utilities.general import environment_reader, compute_tokens
 
 environment = environment_reader('./.env')
 
 class Summarizer:
 
     llm = ChatOpenAI(
-        model='gpt-3.5-turbo',
+        model='gpt-4o-mini',
         api_key=environment['OPENAI_API_KEY'],
         temperature=0
     )
@@ -40,6 +40,7 @@ class Summarizer:
         self.chucked_piece_of_text = chuncked_piece_of_text
         self._summarized_text = deepcopy(chuncked_piece_of_text)
         self._summarization_pairs = None
+        self._text_summaries = []
 
     @staticmethod
     def _create_summarization_pairs(pairs):
@@ -54,7 +55,7 @@ class Summarizer:
     @staticmethod
     def _log_message(cycle, index):
         if index%4 == 0:
-            print(f'Summary cycle: {cycle}, pair: {index}')
+            print(f'--- Summary cycle: {cycle}, pair: {index}')
     
     def _get_pieces_of_text(self, pair):
 
@@ -62,7 +63,7 @@ class Summarizer:
 
     def _summarize_single_pair(self, pair: list = []) -> Document:
         first_piece_of_text, second_piece_of_text = \
-            self._get_pieces_of_text(pair)        
+            self._get_pieces_of_text(pair)
         result = self.chain.invoke({
             'first_text': first_piece_of_text,
             'second_text': second_piece_of_text
@@ -89,7 +90,7 @@ class Summarizer:
                 self._summarize_pairs_within_cycle(cycle_index=cycle)
             cycle = cycle + 1
             self._summarized_text = summary_cycle
-        
+        self._text_summaries = self._summarized_text
         print('Summarization complete.')       
 
     def summarize(self):
@@ -107,7 +108,6 @@ class SummarizationManager:
 
     def summarize_text(self):
         for index, chuncked_text in enumerate(self.chuncked_pieces_of_text):
-            print(f'Summarizing {index+1} out of {len(self.chuncked_pieces_of_text)} documents.')
             summarizer = Summarizer(chuncked_piece_of_text=chuncked_text)
             summarizer.summarize()
             self._summarized_text.extend([summarizer.get_summarized_text()])           
@@ -140,8 +140,14 @@ class TextSplitter:
         self._converted_document = \
             self._splitter.create_documents([self.document])
         chunks = len(self._converted_document)
+        # all_tokens = []
+        # for chunk in self._converted_document:
+        #     text = chunk.page_content
+        #     tokens_per_chunk = compute_tokens(text=text)
+        #     all_tokens.extend([tokens_per_chunk])
         while chunks > 128:
-            self.chunk_size += 32
+            self.chunk_size += 8
+            #print(f'Increasing chink size to {self.chunk_size}')
             self._instantiate_splitter()
             self._converted_document = \
                 self._splitter.create_documents([self.document])
@@ -197,14 +203,15 @@ class TextPlotter:
 
     text_wrapper = textwrap.TextWrapper(width=70, fix_sentence_endings=True)
 
-    def __init__(self, document: list[str] = None) -> None:
+    def __init__(self, document: str = None, title: str = None) -> None:
         self.paragraphs = document
-        self._splited_paragraphs = None
+        self.title = title
+        self._splitted_paragraphs = None
         self._wrapped_paragraphs = None
         self._joined_paragraphs = None
 
     def _split_paragraphs(self):
-        self._splited_paragraphs = \
+        self._splitted_paragraphs = \
             self.paragraphs[0].page_content.split('\n\n')
 
     def _wrap_paragraph_text(self, paragraph):
@@ -215,7 +222,7 @@ class TextPlotter:
 
     def _wrap_text(self):
         wrapped_paragraphs = []
-        for paragraph in self._splited_paragraphs:
+        for paragraph in self._splitted_paragraphs:
             wrapped_paragraph = self._wrap_paragraph_text(paragraph=paragraph)
             wrapped_paragraphs.extend([wrapped_paragraph])
 
@@ -229,7 +236,7 @@ class TextPlotter:
         plotting_grid = grid.GridSpec(nrows=1, ncols=1)
         axis_1 = figure.add_subplot(plotting_grid[0, 0])
         text_kwargs = \
-            dict(ha='left', va='top', fontsize=10, family='Times New Roman')
+            dict(ha='left', va='top', fontsize=12, family='Times New Roman')
         axis_1.text(x=.05, y=.95, s=self._joined_paragraphs, **text_kwargs)  
         axis_1.set_xticklabels([])
         axis_1.set_yticklabels([])
@@ -240,6 +247,7 @@ class TextPlotter:
             top=False, 
             left=False
         )
+        axis_1.set_title(f'Summary of {self.title}', loc='left')
         plt.show()
     
     def plot_text(self):
@@ -250,14 +258,15 @@ class TextPlotter:
 
 class TextPlotterManager:
 
-    def __init__(self, documents: list[str]) -> None:
+    def __init__(self, documents: list[str], titles: list[str]) -> None:
         self.documents = documents
+        self.titles = titles
 
     @staticmethod
-    def _plot_text(document: list[str] = None):
-        text_plotter = TextPlotter(document=document)
+    def _plot_text(document: str = None, title: str = None):
+        text_plotter = TextPlotter(document=document, title=title)
         text_plotter.plot_text()
 
     def plot_text(self):
-        for document in self.documents:
-            self._plot_text(document=document)
+        for document, title in zip(self.documents, self.titles):
+            self._plot_text(document=document, title=title)
