@@ -107,7 +107,7 @@ class SummarizationManager:
         self._summarized_text = []
 
     def summarize_text(self):
-        for index, chuncked_text in enumerate(self.chuncked_pieces_of_text):
+        for chuncked_text in self.chuncked_pieces_of_text:
             summarizer = Summarizer(chuncked_piece_of_text=chuncked_text)
             summarizer.summarize()
             self._summarized_text.extend([summarizer.get_summarized_text()])           
@@ -140,14 +140,8 @@ class TextSplitter:
         self._converted_document = \
             self._splitter.create_documents([self.document])
         chunks = len(self._converted_document)
-        # all_tokens = []
-        # for chunk in self._converted_document:
-        #     text = chunk.page_content
-        #     tokens_per_chunk = compute_tokens(text=text)
-        #     all_tokens.extend([tokens_per_chunk])
         while chunks > 128:
             self.chunk_size += 8
-            #print(f'Increasing chink size to {self.chunk_size}')
             self._instantiate_splitter()
             self._converted_document = \
                 self._splitter.create_documents([self.document])
